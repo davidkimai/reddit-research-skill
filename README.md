@@ -240,6 +240,78 @@ This example shows /last30days learning **domain-specific prompting techniques**
 
 ---
 
+## Example: DeepSeek R1 (Hot AI News)
+
+**Query:** `/last30days what are people saying about DeepSeek R1`
+
+**Research Output:**
+> The AI community is divided on DeepSeek R1. Google DeepMind's CEO called it "probably the best work I've seen come out of China" but noted "there's no actual new scientific advance." Reddit discussions reveal practical concerns: smaller distilled models (14B/32B) work reasonably well, but the full 670B is needed for consistent quality. Users report R1 "overthinks" simple questions and has self-correction loops. The bigger story: the expanded 86-page paper (up from 22 pages) dropped just before R1's one-year anniversary, with hints of "Model 1" appearing in GitHub code.
+
+**Key insights discovered:**
+1. Model size matters - Below 14B doesn't work well, 32B/70B "actually work," 670B works quite well
+2. Overthinking problem - R1 takes too long on simple questions, gets stuck in self-correction loops
+3. Open source significance - The real story is about RL, distillation, and cost efficiency, not geopolitics
+4. Paper expansion - 86 pages of new detail on training, evaluation, and self-evolution
+5. Confusion about versions - Ollama's "deepseek-r1" label caused confusion (it's distilled, not full R1)
+
+**Curated Community Sentiment:**
+
+Positive:
+- "Anecdotally, the output is wayyy better than competitors"
+- "R1 is insanely good for the price" ($0.55/M tokens vs $60 for o1-pro)
+- "Top-tier performance in Fiction.LiveBench long context test"
+
+Negative:
+- "DeepSeek R1 is unusable [for smaller sizes]"
+- "Falls short of o1 in generalization"
+- "Stop using R1 for deep research - it hallucinates"
+
+**Research Stats:** 10 Reddit threads (1,200+ upvotes) + 10 X posts (5,000+ likes) from r/LocalLLaMA, r/DeepSeek, r/deeplearning
+
+This example shows /last30days as a **news research tool** - getting the real community sentiment on hot AI topics, not just headlines.
+
+---
+
+## Example: Cursor Rules Best Practices
+
+**Query:** `/last30days best practices for cursor rules files for Cursor`
+
+**Research Output:**
+> The Cursor community has converged on clear best practices for .cursorrules files. The key shift: move from a single .cursorrules file to the .cursor/rules/ directory with multiple .mdc files. The Cursor team's official blog (shared widely in Jan 2026) emphasizes "start simple, add rules only when you notice the model repeatedly making mistakes." Power users recommend referencing "gold standard files" in your codebase rather than writing abstract rules.
+
+**Key patterns discovered:**
+1. Use .cursor/rules/ directory - Multiple .mdc files beat one monolithic .cursorrules
+2. Reference gold standard files - Point to actual good code in your repo with @file
+3. Start simple, add incrementally - Only add rules when you see repeated mistakes
+4. Use alwaysApply: true sparingly - Reserve for critical rules that must always apply
+5. Rules are "the constitution for your codebase" - They keep the AI aligned
+
+**Best practices from Cursor's official guide:**
+- Plan before coding (use plan mode)
+- Rules = static context that applies to every conversation
+- Add rules only when you notice the model repeatedly making the same mistake
+- Test your tests and run linting checks
+
+**Community-shared rule structure:**
+```markdown
+---
+alwaysApply: true
+---
+
+# STRICT RULES
+
+## CRITICAL PARTNER MINDSET
+- Test your tests
+- Run npm run lint:ci for lint check
+- Follow the conventions used by existing code
+```
+
+**Research Stats:** 24 Reddit threads (500+ upvotes) + 16 X posts (5,000+ likes) from r/cursor, @cursor_ai, @Hesamation
+
+This example shows /last30days researching **coding AI tool best practices** - getting real-world workflows from developers using Cursor, not just documentation.
+
+---
+
 ## Example: Suno AI Music (Simple Mode)
 
 **Query:** `/last30days prompt advice for using suno to make killer songs in simple mode`
