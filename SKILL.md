@@ -215,24 +215,33 @@ Identify from the ACTUAL RESEARCH OUTPUT:
 
 **FIRST - What I learned (based on QUERY_TYPE):**
 
-**If RECOMMENDATIONS** - Show specific things mentioned in ASCII TABLE format:
+**If RECOMMENDATIONS** - Show specific things mentioned in STACKED CARD format:
 ```
 🏆 Most mentioned:
 
-┌────────────────────┬─────────────┬───────────┬─────────────────────────────────────┐
-│ Name               │ Details     │ Mentions  │ Key Sources                         │
-├────────────────────┼─────────────┼───────────┼─────────────────────────────────────┤
-│ [Specific name]    │ [context]   │ {n}x      │ @handle1, @handle2, r/sub, blog.com │
-│ [Specific name]    │ [context]   │ {n}x      │ @handle3, Rolling Stone, Complex    │
-│ [Specific name]    │ [context]   │ {n}x      │ r/sub, @handle4, Variety            │
-└────────────────────┴─────────────┴───────────┴─────────────────────────────────────┘
+Tool: [Specific name]
+Mentions: {n}x
+Use Case: [what it does / why people recommend it]
+Sources: @handle1, @handle2, r/sub, blog.com
+────────────────────────────────────────────────────────
+Tool: [Specific name]
+Mentions: {n}x
+Use Case: [what it does]
+Sources: @handle3, r/sub2, Complex
+────────────────────────────────────────────────────────
+Tool: [Specific name]
+Mentions: {n}x
+Use Case: [what it does]
+Sources: r/sub, @handle4, Variety
+────────────────────────────────────────────────────────
 
 Notable mentions: [other specific things with 1-2 mentions]
 ```
 
 **CRITICAL for RECOMMENDATIONS:**
-- Use ASCII box-drawing characters (┌ ─ ┬ ┐ │ ├ ┼ ┤ └ ┴ ┘) for tables
-- "Key Sources" column MUST include actual @handles from X posts (e.g., @LONGLIVE47, @ByDobson)
+- Use stacked card format (responsive, doesn't break on narrow terminals)
+- Separate cards with horizontal rule: ────────────────────────────────────────────────────────
+- "Sources:" line MUST include actual @handles from X posts (e.g., @LONGLIVE47, @ByDobson)
 - Include subreddit names (r/hiphopheads) and web sources (Complex, Variety)
 - Parse @handles from research output and include the highest-engagement ones
 
