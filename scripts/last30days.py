@@ -168,38 +168,65 @@ def _search_x(
     to_date: str,
     depth: str,
     mock: bool,
+    x_source: str = "xai",
 ) -> tuple:
-    """Search X via xAI (runs in thread).
+    """Search X via Bird CLI or xAI (runs in thread).
+
+    Args:
+        x_source: 'bird' or 'xai' - which backend to use
 
     Returns:
-        Tuple of (x_items, raw_xai, error)
+        Tuple of (x_items, raw_response, error)
     """
-    raw_xai = None
+    raw_response = None
     x_error = None
 
     if mock:
-        raw_xai = load_fixture("xai_sample.json")
-    else:
+        raw_response = load_fixture("xai_sample.json")
+        x_items = xai_x.parse_x_response(raw_response or {})
+        return x_items, raw_response, x_error
+
+    # Use Bird if specified
+    if x_source == "bird":
         try:
-            raw_xai = xai_x.search_x(
-                config["XAI_API_KEY"],
-                selected_models["xai"],
+            raw_response = bird_x.search_x(
                 topic,
                 from_date,
                 to_date,
                 depth=depth,
             )
-        except http.HTTPError as e:
-            raw_xai = {"error": str(e)}
-            x_error = f"API error: {e}"
         except Exception as e:
-            raw_xai = {"error": str(e)}
+            raw_response = {"error": str(e)}
             x_error = f"{type(e).__name__}: {e}"
 
-    # Parse response
-    x_items = xai_x.parse_x_response(raw_xai or {})
+        x_items = bird_x.parse_bird_response(raw_response or {})
 
-    return x_items, raw_xai, x_error
+        # Check for error in response
+        if raw_response and raw_response.get("error") and not x_error:
+            x_error = raw_response["error"]
+
+        return x_items, raw_response, x_error
+
+    # Use xAI (original behavior)
+    try:
+        raw_response = xai_x.search_x(
+            config["XAI_API_KEY"],
+            selected_models["xai"],
+            topic,
+            from_date,
+            to_date,
+            depth=depth,
+        )
+    except http.HTTPError as e:
+        raw_response = {"error": str(e)}
+        x_error = f"API error: {e}"
+    except Exception as e:
+        raw_response = {"error": str(e)}
+        x_error = f"{type(e).__name__}: {e}"
+
+    x_items = xai_x.parse_x_response(raw_response or {})
+
+    return x_items, raw_response, x_error
 
 
 def run_research(
@@ -212,6 +239,7 @@ def run_research(
     depth: str = "default",
     mock: bool = False,
     progress: ui.ProgressDisplay = None,
+    x_source: str = "xai",
 ) -> tuple:
     """Run the research pipeline.
 
@@ -262,7 +290,7 @@ def run_research(
                 progress.start_x()
             x_future = executor.submit(
                 _search_x, topic, config, selected_models,
-                from_date, to_date, depth, mock
+                from_date, to_date, depth, mock, x_source
             )
 
         # Collect results
