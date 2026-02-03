@@ -21,6 +21,23 @@ def _log(msg: str):
     sys.stderr.flush()
 
 
+def _extract_core_subject(topic: str) -> str:
+    """Extract core subject from verbose query for X search.
+
+    X search is literal keyword matching, not semantic.
+    Strip noise words to get searchable terms.
+    """
+    noise = ['best', 'top', 'how to', 'tips for', 'practices', 'features',
+             'killer', 'guide', 'tutorial', 'recommendations', 'advice',
+             'prompting', 'using', 'for', 'with', 'the', 'of', 'in', 'on',
+             'usecases', 'use cases', 'examples', 'what are', 'what is']
+    words = topic.lower().split()
+    result = [w for w in words if w not in noise]
+    # Rejoin compound terms that got split (e.g., "open claw" -> "openclaw")
+    joined = ' '.join(result[:4]) or topic  # Keep max 4 words
+    return joined
+
+
 def is_bird_installed() -> bool:
     """Check if Bird CLI is installed.
 
@@ -127,9 +144,13 @@ def search_x(
     """
     count = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
 
+    # Extract core subject - X search is literal, not semantic
+    # "best open claw usecases" -> "open claw" (searchable keywords)
+    core_topic = _extract_core_subject(topic)
+
     # Build query with date filter using X's search syntax
     # Bird doesn't support --since flag, but X search accepts since:YYYY-MM-DD in query
-    query = f"{topic} since:{from_date}"
+    query = f"{core_topic} since:{from_date}"
 
     # Build command
     cmd = [
@@ -212,8 +233,9 @@ def parse_bird_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         created_at = tweet.get("createdAt") or tweet.get("created_at", "")
         if created_at:
             try:
-                # Try ISO format first
-                if "T" in created_at:
+                # Try ISO format first (e.g., "2026-02-03T22:33:32Z")
+                # Check for ISO date separator, not just "T" (which appears in "Tue")
+                if len(created_at) > 10 and created_at[10] == "T":
                     dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
                 else:
                     # Twitter format: "Wed Jan 15 14:30:00 +0000 2026"
