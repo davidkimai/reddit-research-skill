@@ -25,9 +25,6 @@ cat >> ~/.zshrc << 'EOF'
 # Composio (free Reddit + X search)
 export COMPOSIO_API_KEY="your-api-key"
 export COMPOSIO_USER_ID="pg-test-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-# Optional: specific connection IDs
-export COMPOSIO_REDDIT_CONNECTION_ID="ca_xxxxxxxx"
-export COMPOSIO_TWITTER_CONNECTION_ID="ca_yyyyyyyy"
 EOF
 source ~/.zshrc
 ```
@@ -814,10 +811,18 @@ This example shows /last30days discovering **emerging developer workflows** - re
 
 - **Composio API key** - Get free API key at https://app.composio.dev
 - **Reddit connected** via Composio dashboard
-- **Twitter connected** via Composio dashboard  
-- **User ID** - Set `COMPOSIO_USER_ID` environment variable
+- **Twitter connected** via Composio dashboard
+- **Entity ID** - Set `COMPOSIO_USER_ID` environment variable (same for both)
 
-The script automatically detects Composio and uses it for both Reddit and Twitter search.
+**Setup:**
+1. Create free Composio account at https://app.composio.dev
+2. Get your API key from the dashboard
+3. **Connect Reddit** through Composio (OAuth flow)
+4. **Connect Twitter** through Composio (OAuth flow)
+5. Copy your User ID from the dashboard
+6. Set: `export COMPOSIO_USER_ID="pg-test-xxx"`
+
+**Note:** Both Reddit and Twitter need to be connected via Composio dashboard first.
 
 ### Option 2: Original (OpenAI + xAI or Bird CLI)
 
