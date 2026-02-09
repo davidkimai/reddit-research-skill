@@ -12,6 +12,37 @@
 
 ## Installation
 
+### Option 1: Composio (Recommended - Free Tier Available)
+
+This fork uses Composio for both Reddit and Twitter search, which provides a free tier (20K calls/month). No Reddit/Twitter API keys needed!
+
+```bash
+# Clone the repo
+git clone https://github.com/davidkimai/reddit-research-skill.git ~/.claude/skills/reddit-research
+
+# Set up Composio environment variables
+cat >> ~/.zshrc << 'EOF'
+# Composio (free Reddit + X search)
+export COMPOSIO_API_KEY="your-api-key"
+export COMPOSIO_USER_ID="pg-test-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# Optional: specific connection IDs
+export COMPOSIO_REDDIT_CONNECTION_ID="ca_xxxxxxxx"
+export COMPOSIO_TWITTER_CONNECTION_ID="ca_yyyyyyyy"
+EOF
+source ~/.zshrc
+```
+
+**Setup steps:**
+1. Create free Composio account at https://app.composio.dev
+2. Get your API key from the dashboard
+3. Connect Reddit and Twitter through Composio (OAuth flow)
+4. Copy your User ID from the dashboard
+5. Set the environment variables above
+
+**The script automatically detects and uses Composio when available.**
+
+### Option 2: OpenAI API Key (Original)
+
 ```bash
 # Clone the repo
 git clone https://github.com/mvanhorn/last30days-skill.git ~/.claude/skills/last30days
@@ -778,6 +809,17 @@ This example shows /last30days discovering **emerging developer workflows** - re
 | `--sources=x` | X only |
 
 ## Requirements
+
+### Option 1: Composio (Recommended - Free Tier Available)
+
+- **Composio API key** - Get free API key at https://app.composio.dev
+- **Reddit connected** via Composio dashboard
+- **Twitter connected** via Composio dashboard  
+- **User ID** - Set `COMPOSIO_USER_ID` environment variable
+
+The script automatically detects Composio and uses it for both Reddit and Twitter search.
+
+### Option 2: Original (OpenAI + xAI or Bird CLI)
 
 - **OpenAI API key** - For Reddit research (uses web search via Responses API)
 - **X search** (one of):

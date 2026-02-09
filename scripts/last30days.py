@@ -28,6 +28,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from lib import (
     bird_x,
+    composio_reddit,
+    composio_twitter,
     dates,
     dedupe,
     entity_extract,
@@ -55,6 +57,95 @@ def load_fixture(name: str) -> dict:
     return {}
 
 
+def detect_api_source() -> dict:
+    """Detect which API sources are available.
+    
+    Returns:
+        Dict with 'reddit' and 'x' keys showing available sources:
+        - 'composio': Composio (free tier available)
+        - 'openai': OpenAI API (Reddit)
+        - 'xai': xAI API (X/Twitter)
+        - 'bird': Bird CLI (free X search)
+    """
+    sources = {"reddit": None, "x": None}
+    
+    # Check Composio (preferred for both)
+    try:
+        key = os.environ.get("COMPOSIO_API_KEY")
+        user_id = os.environ.get("COMPOSIO_USER_ID")
+        if key and user_id:
+            sources["reddit"] = "composio"
+            sources["x"] = "composio"
+    except Exception:
+        pass
+    
+    # Check OpenAI for Reddit
+    try:
+        if os.environ.get("OPENAI_API_KEY"):
+            sources["reddit"] = "openai"
+    except Exception:
+        pass
+    
+    # Check xAI for Twitter
+    try:
+        if os.environ.get("XAI_API_KEY"):
+            sources["x"] = "xai"
+    except Exception:
+        pass
+    
+    # Check Bird CLI for Twitter
+    try:
+        import shutil
+        if shutil.which("bird"):
+            sources["x"] = "bird"
+    except Exception:
+        pass
+    
+    return sources
+
+
+def _search_reddit_composio(
+    topic: str,
+    from_date: str,
+    to_date: str,
+    max_results: int = 20,
+) -> tuple:
+    """Search Reddit via Composio (runs in thread).
+    
+    Returns:
+        Tuple of (reddit_items, raw_response, error)
+    """
+    try:
+        raw_response = composio_reddit.search_reddit_topic(
+            query=topic,
+            max_results=max_results,
+        )
+        items = composio_reddit.parse_reddit_response(raw_response)
+        items = composio_reddit.enrich_with_metrics(items)
+        return items, raw_response, None
+    except Exception as e:
+        return [], {"error": str(e)}, f"{type(e).__name__}: {e}"
+
+
+def _search_x_composio(
+    topic: str,
+    max_results: int = 20,
+) -> tuple:
+    """Search Twitter via Composio (runs in thread).
+    
+    Returns:
+        Tuple of (x_items, raw_response, error)
+    """
+    try:
+        raw_response = composio_twitter.search_twitter_topic(
+            query=topic,
+            max_results=max_results,
+        )
+        return raw_response, raw_response, None
+    except Exception as e:
+        return [], {"error": str(e)}, f"{type(e).__name__}: {e}"
+
+
 def _search_reddit(
     topic: str,
     config: dict,
@@ -64,19 +155,33 @@ def _search_reddit(
     depth: str,
     mock: bool,
 ) -> tuple:
-    """Search Reddit via OpenAI (runs in thread).
+    """Search Reddit via Composio or OpenAI (runs in thread).
 
     Returns:
-        Tuple of (reddit_items, raw_openai, error)
+        Tuple of (reddit_items, raw_response, error)
     """
-    raw_openai = None
+    raw_response = None
     reddit_error = None
 
     if mock:
-        raw_openai = load_fixture("openai_sample.json")
+        raw_response = load_fixture("openai_sample.json")
     else:
+        # Try Composio first (preferred - free tier available)
         try:
-            raw_openai = openai_reddit.search_reddit(
+            composio_key = os.environ.get("COMPOSIO_API_KEY")
+            composio_user = os.environ.get("COMPOSIO_USER_ID")
+            if composio_key and composio_user:
+                reddit_items, raw_response, reddit_error = _search_reddit_composio(
+                    topic, from_date, to_date, max_results=20
+                )
+                if reddit_items:
+                    return reddit_items, raw_response, reddit_error
+        except Exception as e:
+            reddit_error = f"Composio unavailable: {e}"
+
+        # Fall back to OpenAI
+        try:
+            raw_response = openai_reddit.search_reddit(
                 config["OPENAI_API_KEY"],
                 selected_models["openai"],
                 topic,
@@ -85,14 +190,14 @@ def _search_reddit(
                 depth=depth,
             )
         except http.HTTPError as e:
-            raw_openai = {"error": str(e)}
+            raw_response = {"error": str(e)}
             reddit_error = f"API error: {e}"
         except Exception as e:
-            raw_openai = {"error": str(e)}
+            raw_response = {"error": str(e)}
             reddit_error = f"{type(e).__name__}: {e}"
 
     # Parse response
-    reddit_items = openai_reddit.parse_reddit_response(raw_openai or {})
+    reddit_items = openai_reddit.parse_reddit_response(raw_response or {})
 
     # Quick retry with simpler query if few results
     if len(reddit_items) < 5 and not mock and not reddit_error:
@@ -134,7 +239,7 @@ def _search_reddit(
         except Exception:
             pass
 
-    return reddit_items, raw_openai, reddit_error
+    return reddit_items, raw_response, reddit_error
 
 
 def _search_x(
@@ -145,12 +250,12 @@ def _search_x(
     to_date: str,
     depth: str,
     mock: bool,
-    x_source: str = "xai",
+    x_source: str = "auto",
 ) -> tuple:
-    """Search X via Bird CLI or xAI (runs in thread).
+    """Search X via Composio, Bird CLI, or xAI (runs in thread).
 
     Args:
-        x_source: 'bird' or 'xai' - which backend to use
+        x_source: 'auto', 'bird', 'xai', or 'composio' - which backend to use
 
     Returns:
         Tuple of (x_items, raw_response, error)
@@ -163,28 +268,40 @@ def _search_x(
         x_items = xai_x.parse_x_response(raw_response or {})
         return x_items, raw_response, x_error
 
-    # Use Bird if specified
-    if x_source == "bird":
+    # Try Composio first (preferred - free tier available)
+    if x_source in ("auto", "composio"):
         try:
-            raw_response = bird_x.search_x(
-                topic,
-                from_date,
-                to_date,
-                depth=depth,
-            )
+            composio_key = os.environ.get("COMPOSIO_API_KEY")
+            composio_user = os.environ.get("COMPOSIO_USER_ID")
+            if composio_key and composio_user:
+                x_items, raw_response, x_error = _search_x_composio(topic, max_results=20)
+                if x_items:
+                    return x_items, raw_response, x_error
+        except Exception as e:
+            x_error = f"Composio unavailable: {e}"
+
+    # Use Bird if specified or as fallback
+    if x_source in ("auto", "bird"):
+        try:
+            import shutil
+            if shutil.which("bird") or x_source == "bird":
+                raw_response = bird_x.search_x(
+                    topic,
+                    from_date,
+                    to_date,
+                    depth=depth,
+                )
+                x_items = bird_x.parse_bird_response(raw_response or {})
+                # Check for error in response
+                if raw_response and isinstance(raw_response, dict) and raw_response.get("error") and not x_error:
+                    x_error = raw_response["error"]
+                if x_items or x_source == "bird":
+                    return x_items, raw_response, x_error
         except Exception as e:
             raw_response = {"error": str(e)}
             x_error = f"{type(e).__name__}: {e}"
 
-        x_items = bird_x.parse_bird_response(raw_response or {})
-
-        # Check for error in response (Bird returns list on success, dict on error)
-        if raw_response and isinstance(raw_response, dict) and raw_response.get("error") and not x_error:
-            x_error = raw_response["error"]
-
-        return x_items, raw_response, x_error
-
-    # Use xAI (original behavior)
+    # Use xAI as final fallback
     try:
         raw_response = xai_x.search_x(
             config["XAI_API_KEY"],
