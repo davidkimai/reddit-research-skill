@@ -1,6 +1,7 @@
 """Bird CLI client for X (Twitter) search."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,27 @@ DEPTH_CONFIG = {
 def _log(msg: str):
     """Log to stderr."""
     sys.stderr.write(f"[Bird] {msg}\n")
+
+
+def get_chrome_profile_dir() -> str:
+    """Get Chrome profile directory for Bird CLI authentication."""
+    # Check environment variable first
+    if os.environ.get("BIRD_CHROME_DIR"):
+        return os.environ["BIRD_CHROME_DIR"]
+    
+    # Common Chrome profile paths
+    home = os.path.expanduser("~")
+    possible_paths = [
+        f"{home}/.gemini/antigravity-browser-profile/Default",
+        f"{home}/Library/Application Support/Google/Chrome/Default",
+        f"{home}/Library/Application Support/Google/Chrome/Profile 1",
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    return ""
     sys.stderr.flush()
 
 
@@ -94,9 +116,16 @@ def is_bird_authenticated() -> Optional[str]:
     if not is_bird_installed():
         return None
 
+    chrome_dir = get_chrome_profile_dir()
+    cmd = ["bird", "whoami"]
+    
+    # Add Chrome profile if available
+    if chrome_dir:
+        cmd.extend(["--chrome-profile-dir", chrome_dir])
+
     try:
         result = subprocess.run(
-            ["bird", "whoami"],
+            cmd,
             capture_output=True,
             text=True,
             timeout=10,
@@ -174,12 +203,18 @@ def _run_bird_search(query: str, count: int, timeout: int) -> Dict[str, Any]:
     Returns:
         Raw Bird JSON response or error dict.
     """
+    chrome_dir = get_chrome_profile_dir()
+    
     cmd = [
         "bird", "search",
         query,
         "-n", str(count),
         "--json",
     ]
+    
+    # Add Chrome profile if available
+    if chrome_dir:
+        cmd.extend(["--chrome-profile-dir", chrome_dir])
 
     try:
         result = subprocess.run(
